@@ -1,0 +1,43 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# dotenv environment files
+.env
+.env.*.local
+.env.local
+
+# Output directories
+dist/
+build/
+
+# TypeScript build files
+*.tsbuildinfo
+
+# VSCode and IDEs
+.vscode/
+.idea/
+*.swp
+
+# Mac system files
+.DS_Store
+
+# Optional: Ignore coverage reports
+coverage/
+
+# Optional: Ignore database files
+*.sqlite
+*.db
