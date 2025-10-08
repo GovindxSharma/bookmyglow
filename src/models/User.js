@@ -1,13 +1,7 @@
 import mongoose from "mongoose";
-import { v4 as uuidv4 } from "uuid";
 
 const userSchema = new mongoose.Schema(
   {
-    id: {
-      type: String,
-      default: uuidv4,
-      unique: true,
-    },
     name: {
       type: String,
       required: [true, "Name is required"],
@@ -26,7 +20,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["Super_admin", "admin", "receptionist", "employee", "customer"],
+      enum: ["super_admin", "admin", "receptionist", "employee", "customer"],
       default: "customer",
     },
     phone: {
