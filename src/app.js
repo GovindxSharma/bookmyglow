@@ -2,8 +2,9 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
-import authRoutes from "./routes/auth.routes.js";
 import { verifyToken } from "./middlewares/auth.js";
+import apiRoutes from "./routes/index.js";
+
 
 dotenv.config();
 connectDB();
@@ -17,7 +18,10 @@ app.get("/", (req, res) => {
 });
 
 // auth routes
-app.use("/api/auth", authRoutes);
+// app.use("/api/auth", authRoutes);
+// app.use("/api/appointments", appointmentRoutes);
+app.use("/", apiRoutes);
+
 
 // example protected route
 app.get("/api/profile", verifyToken, (req, res) => {
