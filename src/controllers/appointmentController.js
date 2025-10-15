@@ -1,6 +1,6 @@
 import Appointment from "../models/Appointment.js";
 import Customer from "../models/Customer.js";
-import Service from "../models/Service.js";
+import Payment from "../models/Payment.js"; 
 
 
 // 📅 CREATE APPOINTMENT (auto customer creation)
@@ -112,6 +112,25 @@ export const updateAppointment = async (req, res) => {
 
     if (!updated)
       return res.status(404).json({ message: "Appointment not found" });
+
+    // 💰 If payment details are added during update, create payment
+    const { amount, payment_mode } = req.body;
+    if (amount && payment_mode) {
+      const existingPayment = await Payment.findOne({
+        appointment_id: updated._id,
+      });
+
+      if (!existingPayment) {
+        await Payment.create({
+          appointment_id: updated._id,
+          customer_id: updated.customer_id,
+          amount,
+          payment_mode,
+          status: "completed",
+          date: new Date(),
+        });
+      }
+    }
 
     res.status(200).json({
       message: "Appointment updated successfully ✅",
