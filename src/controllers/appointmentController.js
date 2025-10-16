@@ -1,6 +1,7 @@
 import Appointment from "../models/Appointment.js";
 import Customer from "../models/Customer.js";
 import Payment from "../models/Payment.js";
+import Service from "../models/Service.js";
 
 // 📅 CREATE APPOINTMENT (auto customer creation)
 export const createAppointment = async (req, res) => {
@@ -13,21 +14,27 @@ export const createAppointment = async (req, res) => {
       dob,
       address,
       note,
-      source,
+      source ,
       salon_id,
       employee_id,
       service_id,
+      sub_service_id, // may be null
       date,
       appointment_time,
       amount,
       payment_mode,
     } = req.body;
 
-    // 1️⃣ Check or create customer by phone/email
-    let customer = await Customer.findOne({
-      $or: [{ phone }, { email }],
-    });
+    // 1️⃣ Basic validations
+    if (!salon_id || !service_id || !date || !appointment_time) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required appointment fields",
+      });
+    }
 
+    // 2️⃣ Find or create customer
+    let customer = await Customer.findOne({ $or: [{ phone }, { email }] });
     if (!customer) {
       customer = await Customer.create({
         name,
@@ -41,38 +48,65 @@ export const createAppointment = async (req, res) => {
       });
     }
 
-    // 2️⃣ Create new appointment linked to customer
-    const appointment = await Appointment.create({
+    // 3️⃣ Fetch service and calculate price
+    const service = await Service.findById(service_id);
+    if (!service) {
+      return res.status(404).json({ success: false, message: "Service not found" });
+    }
+
+    let finalAmount = amount || 0;
+
+    if (sub_service_id && service.sub_services?.length) {
+      const sub = service.sub_services.id(sub_service_id);
+      if (sub) finalAmount = sub.price;
+    } else if (!amount && !service.sub_services?.length) {
+      finalAmount = service.price || 0;
+    }
+
+    // 4️⃣ Create appointment object dynamically
+    const appointmentData = {
       customer_id: customer._id,
       salon_id,
       employee_id,
       service_id,
       date,
       appointment_time,
-      amount,
+      duration: service.duration,
+      amount: finalAmount,
       payment_mode,
       source,
-    });
+      note,
+      confirmation_status: false,
+      payment_status: "pending",
+    };
+
+    if (sub_service_id) appointmentData.sub_service_id = sub_service_id;
+
+    const appointment = await Appointment.create(appointmentData);
 
     res.status(201).json({
-      message: "Appointment booked successfully ✨",
+      success: true,
+      message: "Appointment booked successfully ✨ Awaiting approval.",
       appointment,
     });
   } catch (err) {
     console.error("Error creating appointment:", err);
-    res
-      .status(500)
-      .json({ message: "Failed to create appointment", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to create appointment",
+      error: err.message,
+    });
   }
 };
+
 
 // 📋 GET ALL APPOINTMENTS (Admin/Receptionist)
 export const getAllAppointments = async (req, res) => {
   try {
     const appointments = await Appointment.find()
-      .populate("customer_id", "name phone email")
+      .populate("customer_id", "name phone email gender dob address note")
       .populate("employee_id", "name role")
-      .populate("service_id", "name price")
+      .populate("service_id", "name price sub_services")
       .populate("salon_id", "name email role")
       .sort({ created_at: -1 });
 
