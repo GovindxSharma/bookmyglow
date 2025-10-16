@@ -14,16 +14,16 @@ const router = express.Router();
 // 🧾 receptionist/admin can create appointment
 router.post(
   "/",
-  verifyToken,
-  checkPermission("create", "appointment"),
+  // verifyToken,
+  // checkPermission("create", "appointment"),
   createAppointment
 );
 
 // 📋 admin/receptionist view appointments
 router.get(
   "/",
-  verifyToken,
-  checkPermission("read", "appointment"),
+  // verifyToken,
+  // checkPermission("read", "appointment"),
   getAllAppointments
 );
 

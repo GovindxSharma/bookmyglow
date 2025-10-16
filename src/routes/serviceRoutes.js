@@ -23,8 +23,8 @@ router.post(
 // 📋 Get all services (Admin & Receptionist)
 router.get(
   "/",
-  verifyToken,
-  checkPermission("read", "service"),
+  // verifyToken,
+  // checkPermission("read", "service"),
   getAllServices
 );
 

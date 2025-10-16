@@ -1,7 +1,6 @@
 import Appointment from "../models/Appointment.js";
 import Customer from "../models/Customer.js";
-import Payment from "../models/Payment.js"; 
-
+import Payment from "../models/Payment.js";
 
 // 📅 CREATE APPOINTMENT (auto customer creation)
 export const createAppointment = async (req, res) => {
