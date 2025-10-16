@@ -21,6 +21,11 @@ const appointmentSchema = new mongoose.Schema(
       ref: "Service",
       required: true,
     },
+     // 👇 NEW FIELD
+     sub_service_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
     date: {
       type: Date,
       required: true,
