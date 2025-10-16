@@ -104,6 +104,27 @@ export const updateUser = async (req, res) => {
   }
 };
 
+// 📋 GET ALL EMPLOYEES
+export const getAllEmployees = async (req, res) => {
+  try {
+    const employees = await User.find({ role: "employee" }).select(
+      "-password -access_token"
+    ); // Exclude sensitive info
+
+    if (!employees.length)
+      return res.status(404).json({ message: "No employees found" });
+
+    res.status(200).json({
+      message: "Employees fetched successfully",
+      employees,
+    });
+  } catch (err) {
+    console.error("Error fetching employees:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 // DELETE USER
 export const deleteUser = async (req, res) => {
   const { id } = req.params;
