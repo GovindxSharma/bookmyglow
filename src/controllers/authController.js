@@ -46,11 +46,13 @@ export const login = async (req, res) => {
     res.status(200).json({
       message: "Login successful",
       token,
+      role: user.role, // ✅ only returning role
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // LOGOUT
 export const logout = async (req, res) => {

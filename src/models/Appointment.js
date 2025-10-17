@@ -21,10 +21,10 @@ const appointmentSchema = new mongoose.Schema(
       ref: "Service",
       required: true,
     },
-     // 👇 NEW FIELD
-     sub_service_id: {
+    // 👇 NEW FIELD
+    sub_service_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+      // required: true,
     },
     date: {
       type: Date,
@@ -32,11 +32,11 @@ const appointmentSchema = new mongoose.Schema(
     },
     appointment_time: {
       type: String,
-      required: true,
+      // required: true,
     },
     confirmation_status: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     duration: {
       type: String,
