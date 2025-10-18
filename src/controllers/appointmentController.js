@@ -239,6 +239,9 @@ export const updateAppointment = async (req, res) => {
           date: new Date(),
         });
       }
+
+      updated.payment_status = "completed";
+      await updated.save();
     }
 
     res.status(200).json({

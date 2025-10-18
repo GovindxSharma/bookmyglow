@@ -4,20 +4,31 @@ import { generateToken } from "../utils/jwt.js";
 
 // REGISTER
 export const register = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, address } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ message: "Name and email are required" });
+  }
+
+  if (role !== "employee" && !password) {
+    return res
+      .status(400)
+      .json({ message: "Password is required for non-employee users" });
+  }
+
   try {
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ message: "User already exists" });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const userData = { name, email, role, address: address || null };
 
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-    });
+    if (password && role !== "employee") {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      userData.password = hashedPassword;
+    }
+
+    const user = await User.create(userData);
 
     res.status(201).json({ message: "User registered successfully", user });
   } catch (err) {
@@ -83,14 +94,17 @@ export const updateUser = async (req, res) => {
   const updates = req.body;
 
   try {
-    // Only allow admin or user himself
-    if (req.user.role !== "admin" && req.user._id.toString() !== id) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    // If password is being updated, hash it
+    // Hash password if it's being updated
     if (updates.password) {
       updates.password = await bcrypt.hash(updates.password, 10);
+    }
+
+    // Optional: limit employee updatable fields
+    if (updates.role === "employee") {
+      const allowedFields = ["name", "email", "address"];
+      Object.keys(updates).forEach((key) => {
+        if (!allowedFields.includes(key)) delete updates[key];
+      });
     }
 
     const updatedUser = await User.findByIdAndUpdate(id, updates, {
@@ -132,11 +146,6 @@ export const deleteUser = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Only allow admin or user himself
-    if (req.user.role !== "admin" && req.user._id.toString() !== id) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
     const deletedUser = await User.findByIdAndDelete(id);
 
     if (!deletedUser)
