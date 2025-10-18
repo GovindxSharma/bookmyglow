@@ -8,7 +8,6 @@ export const createAppointment = async (req, res) => {
   try {
     const {
       name,
-      email,
       phone,
       gender,
       dob,
@@ -33,31 +32,82 @@ export const createAppointment = async (req, res) => {
       });
     }
 
-    const service = await Service.findById(service_id);
-      if (!service) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Service not found" });
-        }
+    // Normalize phone number — remove spaces or dashes
+    const normalizedPhone = phone.replace(/\s+/g, "");
 
-    // 2️⃣ Find or create customer
-    let customer = await Customer.findOne({ $or: [{ phone }, { email }] });
+    console.log("📞 Phone number received from payload:", normalizedPhone);
+
+    // 2️⃣ Validate service existence
+    const service = await Service.findById(service_id);
+    if (!service) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Service not found" });
+    }
+
+    // 3️⃣ Find or create customer by phone only
+    let customer = await Customer.findOne({ phone: normalizedPhone });
+
     if (!customer) {
+      console.log(
+        "🆕 No existing customer found with this phone. Creating new..."
+      );
+
       customer = await Customer.create({
         name,
-        email: email || null,
-        phone,
+        phone: normalizedPhone,
         gender: gender || null,
         dob: dob || null,
         address: address || null,
         note: note || null,
         source,
       });
+
+      console.log("✅ New customer created:", {
+        id: customer._id,
+        name: customer.name,
+        phone: customer.phone,
+      });
+    } else {
+      console.log("👀 Existing customer found:", {
+        id: customer._id,
+        existingName: customer.name,
+        existingPhone: customer.phone,
+      });
+
+      let updated = false;
+
+      if (name && customer.name !== name) {
+        console.log(
+          `✏️ Updating customer name from "${customer.name}" → "${name}"`
+        );
+        customer.name = name;
+        updated = true;
+      }
+
+      if (gender && !customer.gender) {
+        customer.gender = gender;
+        updated = true;
+      }
+
+      if (address && !customer.address) {
+        customer.address = address;
+        updated = true;
+      }
+
+      if (updated) {
+        await customer.save();
+        console.log("💾 Customer updated successfully:", {
+          id: customer._id,
+          name: customer.name,
+          phone: customer.phone,
+        });
+      } else {
+        console.log("⚖️ No customer updates needed.");
+      }
     }
 
-
-
-    // 3️⃣ Prepare appointment data
+    // 4️⃣ Prepare appointment data
     const appointmentData = {
       customer_id: customer._id,
       salon_id: salon_id || null,
@@ -74,10 +124,16 @@ export const createAppointment = async (req, res) => {
       payment_status: payment_mode ? "completed" : "pending",
     };
 
-    // 4️⃣ Create appointment
+    // 5️⃣ Create appointment
     const appointment = await Appointment.create(appointmentData);
+    console.log("🗓️ New appointment created:", {
+      id: appointment._id,
+      customer: customer.name,
+      date: appointment.date,
+      source: appointment.source,
+    });
 
-    // 5️⃣ Create payment record if payment info is provided
+    // 6️⃣ Optional payment record
     if (amount && payment_mode) {
       await Payment.create({
         appointment_id: appointment._id,
@@ -87,15 +143,20 @@ export const createAppointment = async (req, res) => {
         status: "completed",
         date: new Date(),
       });
+      console.log(
+        "💰 Payment record created for appointment:",
+        appointment._id
+      );
     }
 
+    // 7️⃣ Final response
     res.status(201).json({
       success: true,
       message: "Appointment requested successfully ✨ Awaiting approval.",
       appointment,
     });
   } catch (err) {
-    console.error("Error creating appointment:", err);
+    console.error("❌ Error creating appointment:", err);
     res.status(500).json({
       success: false,
       message: "Failed to create appointment",
