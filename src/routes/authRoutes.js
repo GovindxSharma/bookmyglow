@@ -9,10 +9,12 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/logout", verifyToken, logout);
 router.put("/:id",
-  // verifyToken, checkPermission("update"),
+  // verifyToken,
+  // checkPermission("update"),
   updateUser);
 router.delete("/:id",
-  // verifyToken, checkPermission("delete"),
+  // verifyToken,
+  // checkPermission("delete"),
   deleteUser);
 router.get(
   "/employees",
