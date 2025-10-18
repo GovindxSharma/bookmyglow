@@ -1,6 +1,6 @@
 import Attendance from "../models/Attendance.js";
 
-// 🟢 CREATE ATTENDANCE RECORD
+// 🟢 CREATE OR UPDATE ATTENDANCE RECORD (smart handling)
 export const createAttendance = async (req, res) => {
   try {
     const { employee_id, date, leave } = req.body;
@@ -11,15 +11,21 @@ export const createAttendance = async (req, res) => {
         .json({ message: "employee_id and date are required" });
     }
 
+    // Check if attendance already exists for that day
     const existing = await Attendance.findOne({ employee_id, date });
+
     if (existing) {
-      return res
-        .status(400)
-        .json({
-          message: "Attendance already marked for this employee on this date",
-        });
+      // Instead of throwing error, update the record
+      existing.leave = leave ?? existing.leave;
+      await existing.save();
+
+      return res.status(200).json({
+        message: "Attendance already existed — record updated instead ✅",
+        attendance: existing,
+      });
     }
 
+    // Otherwise create a new record
     const attendance = await Attendance.create({
       employee_id,
       date,
@@ -31,7 +37,7 @@ export const createAttendance = async (req, res) => {
       attendance,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Error in createAttendance:", err);
     res
       .status(500)
       .json({ message: "Failed to record attendance", error: err.message });
@@ -66,7 +72,7 @@ export const getAttendanceByEmployee = async (req, res) => {
   }
 };
 
-// ✏️ UPDATE ATTENDANCE (mark leave or unmark)
+// ✏️ UPDATE ATTENDANCE (manual update if needed)
 export const updateAttendance = async (req, res) => {
   try {
     const { leave } = req.body;
