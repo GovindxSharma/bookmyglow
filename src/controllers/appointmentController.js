@@ -22,6 +22,7 @@ export const createAppointment = async (req, res) => {
       appointment_time,
       amount,
       payment_mode,
+      confirmation_status
     } = req.body;
 
     // 1️⃣ Validate minimal required fields
@@ -120,7 +121,7 @@ export const createAppointment = async (req, res) => {
       payment_mode: payment_mode || null,
       source,
       note: note || "",
-      confirmation_status: false, // receptionist to approve
+      confirmation_status: confirmation_status || false,
       payment_status: payment_mode ? "completed" : "pending",
     };
 
