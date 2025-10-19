@@ -16,31 +16,38 @@ const appointmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    service_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
-      required: true,
-    },
-    // 👇 NEW FIELD
-    sub_service_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      // required: true,
-    },
+
+    services: [
+      {
+        service_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Service",
+          required: true,
+        },
+        sub_service_id: {
+          type: mongoose.Schema.Types.ObjectId, // no nested ref
+        },
+        price: {
+          type: Number,
+          default: 0,
+        },
+        duration: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
+
     date: {
       type: Date,
       required: true,
     },
     appointment_time: {
       type: String,
-      // required: true,
     },
     confirmation_status: {
       type: Boolean,
       default: true,
-    },
-    duration: {
-      type: String,
-      default: "",
     },
     rating: {
       type: String,
