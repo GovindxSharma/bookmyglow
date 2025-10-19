@@ -31,8 +31,8 @@ router.get(
 // 🔍 Get service by ID
 router.get(
   "/:id",
-  verifyToken,
-  checkPermission("read", "service"),
+  // verifyToken,
+  // checkPermission("read", "service"),
   getServiceById
 );
 
