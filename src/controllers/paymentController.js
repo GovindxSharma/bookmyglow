@@ -1,6 +1,5 @@
 import Payment from "../models/Payment.js";
-import Appointment from "../models/Appointment.js";
-import User from "../models/User.js"; // employee/customer reference if needed
+import mongoose from "mongoose";
 
 // 🟢 CREATE PAYMENT (manual / admin)
 export const createPayment = async (req, res) => {
@@ -166,12 +165,12 @@ export const getPaymentsGroupedByDate = async (req, res) => {
     const grouped = await Payment.aggregate([
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+          _id: { $dateToString: { format: "%Y-%m", date: "$date" } }, // group by month
           total_amount: { $sum: "$amount" },
           count: { $sum: 1 },
         },
       },
-      { $sort: { _id: -1 } },
+      { $sort: { _id: 1 } }, // sort chronologically
     ]);
 
     res.status(200).json(grouped);
@@ -179,3 +178,4 @@ export const getPaymentsGroupedByDate = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+

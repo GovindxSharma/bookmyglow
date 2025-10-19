@@ -20,6 +20,7 @@ export const createAppointment = async (req, res) => {
       date,
       appointment_time,
       payment_mode,
+      confirmation_status
     } = req.body;
 
     if (!name || !phone || !source || !services || !services.length) {
@@ -82,11 +83,15 @@ export const createAppointment = async (req, res) => {
       customer_id: customer._id,
       salon_id,
       employee_id: employee_id || null,
-      services: validatedServices,
-      date,
-      appointment_time,
-      amount: totalAmount,
-      payment_mode: payment_mode || "",
+      service_id: service_id || null,
+      sub_service_id: sub_service_id || null,
+      date: date || null,
+      appointment_time: appointment_time || null,
+      amount: amount || 0,
+      payment_mode: payment_mode || null,
+      source,
+      note: note || "",
+      confirmation_status: confirmation_status || false,
       payment_status: payment_mode ? "completed" : "pending",
       note: note || "",
       source,
