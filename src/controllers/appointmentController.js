@@ -23,6 +23,8 @@ export const createAppointment = async (req, res) => {
       confirmation_status,
     } = req.body;
 
+    console.log("This is incoming confirmation status:", confirmation_status);
+
     if (!name || !phone || !source || !services || !services.length) {
       return res.status(400).json({
         success: false,
@@ -90,7 +92,7 @@ const appointmentData = {
   payment_mode: payment_mode || null,
   source,
   note: note || "",
-  confirmation_status: confirmation_status || true,
+  confirmation_status: confirmation_status,
   payment_status: payment_mode ? "completed" : "pending",
 };
 
