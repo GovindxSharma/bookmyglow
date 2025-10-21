@@ -10,17 +10,15 @@ connectDB();
 
 const app = express();
 
-// ✅ Whitelist frontend URLs
-const allowedOrigins = [
-  "http://localhost:5173", // for local dev (Vite)
-  "https://bookmyglowf-w2b7.onrender.com", // replace with your deployed frontend domain
-];
+// ✅ Read allowed origins from env (comma-separated for multiple URLs)
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map((url) => url.trim())
+  : ["http://localhost:5173"]; // fallback for local dev
 
-// ✅ Configure CORS securely
+// ✅ Configure CORS dynamically
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like Postman or server-to-server)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -28,11 +26,11 @@ app.use(
         callback(new Error("Not allowed by CORS"));
       }
     },
-    credentials: true, // allow cookies or auth headers
+    credentials: true,
   })
 );
 
-// ✅ Body parsers
+// ✅ Body parsersaddasd
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -51,4 +49,6 @@ app.get("/api/profile", verifyToken, (req, res) => {
 
 // ✅ Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 Server running on port ${PORT}\n🌐 Allowed Origins: ${allowedOrigins.join(", ")}`)
+);
