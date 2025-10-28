@@ -23,7 +23,7 @@ router.post(
 // 📋 admin/receptionist view appointments
 router.get(
   "/",
-  // verifyToken,
+  verifyToken,
   // checkPermission("read", "appointment"),
   getAllAppointments
 );
@@ -38,7 +38,7 @@ router.get(
 // ✏️ update appointment (admin/receptionist)
 router.put(
   "/:id",
-  // verifyToken,
+  verifyToken,
   // checkPermission("update", "appointment"),
   updateAppointment
 );
@@ -51,7 +51,7 @@ router.delete(
   deleteAppointment
 );
 
-router.get("/customer/search/", searchCustomerByPhone);
+router.get("/customer/search/", verifyToken,searchCustomerByPhone);
 
 
 export default router;

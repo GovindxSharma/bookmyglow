@@ -9,16 +9,16 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/logout", verifyToken, logout);
 router.put("/:id",
-  // verifyToken,
+  verifyToken,
   // checkPermission("update"),
   updateUser);
 router.delete("/:id",
-  // verifyToken,
+  verifyToken,
   // checkPermission("delete"),
   deleteUser);
 router.get(
   "/employees",
-//   verifyToken,
+  verifyToken,
 //   checkPermission("read", "user"), // only roles with read access on user can call
   getAllEmployees
 );

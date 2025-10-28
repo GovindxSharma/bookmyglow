@@ -6,13 +6,15 @@ import {
   updateEmployee,
   deleteEmployee,
 } from "../controllers/employeeController.js";
+import { verifyToken } from "../middlewares/auth.js";
+
 
 const router = express.Router();
 
-router.post("/", createEmployee); // ➕ Create
-router.get("/", getAllEmployees); // 📋 All employees (optional salon_id query)
-router.get("/:id", getEmployeeById); // 🔍 Single employee
-router.put("/:id", updateEmployee); // ✏️ Update
-router.delete("/:id", deleteEmployee); // ❌ Delete
+router.post("/", verifyToken,createEmployee); // ➕ Create
+router.get("/", verifyToken, getAllEmployees); // 📋 All employees (optional salon_id query)
+router.get("/:id", verifyToken, getEmployeeById); // 🔍 Single employee
+router.put("/:id", verifyToken, updateEmployee); // ✏️ Update
+router.delete("/:id", verifyToken, deleteEmployee); // ❌ Delete
 
 export default router;
