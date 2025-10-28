@@ -7,14 +7,14 @@ const appointmentSchema = new mongoose.Schema(
       ref: "Customer",
       required: true,
     },
-    salon_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    // salon_id: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "User",
+    //   required: true,
+    // },
     employee_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Employee",
     },
 
     services: [
