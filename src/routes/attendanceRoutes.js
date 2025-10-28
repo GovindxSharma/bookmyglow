@@ -15,7 +15,7 @@ const router = express.Router();
 // 🟢 Create attendance (admin/receptionist)
 router.post(
   "/",
-  // verifyToken,
+  verifyToken,
   // checkPermission("create", "attendance"),
   createAttendance
 );
@@ -31,7 +31,7 @@ router.get(
 // 🔍 Get attendance by employee ID
 router.get(
   "/employee/:employee_id",
-  // verifyToken,
+  verifyToken,
   // checkPermission("read", "attendance"),
   getAttendanceByEmployee
 );
@@ -39,7 +39,7 @@ router.get(
 // ✏️ Update attendance (mark leave)
 router.put(
   "/:id",
-  // verifyToken,
+  verifyToken,
   // checkPermission("update", "attendance"),
   updateAttendance
 );
