@@ -5,6 +5,7 @@ import {
   getAppointmentById,
   updateAppointment,
   deleteAppointment,
+  searchCustomerByPhone
 } from "../controllers/appointmentController.js";
 import { verifyToken } from "../middlewares/auth.js";
 import { checkPermission } from "../middlewares/permission.js"; // ✅ updated import
@@ -49,5 +50,8 @@ router.delete(
   checkPermission("delete", "appointment"),
   deleteAppointment
 );
+
+router.get("/customer/search/", searchCustomerByPhone);
+
 
 export default router;
