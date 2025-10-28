@@ -16,38 +16,29 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      // required: [true, "Password is required"],
+      required: [true, "Password is required"],
     },
     role: {
       type: String,
-      enum: ["super_admin", "admin", "receptionist", "employee"], //removed Cutomer user
-      // default: "",
+      enum: ["super_admin", "admin", "receptionist"], 
     },
     phone: {
       type: [String],
       default: [],
     },
-    profile_picture: {
-      type: String,
-      default: "",
-    },
     status: {
       type: Boolean,
       default: true,
-    },
-    status_updated: {
-      type: Date,
-      default: Date.now,
     },
     address: {
       type: String,
       default: "",
     },
-    permissions: {
-      type: [String],
-      enum: ["create", "read", "update", "delete"],
-      default: [],
-    },
+    // permissions: {
+    //   type: [String],
+    //   enum: ["create", "read", "update", "delete"],
+    //   default: [],
+    // },
     access_token: {
       type: String,
       default: "",
@@ -56,9 +47,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    dob: {
-      type: Date,
-    },
+    // dob: {
+    //   type: Date,
+    // },
     gender: {
       type: String,
       enum: ["male", "female", "other"],
