@@ -3,14 +3,10 @@ import Service from "../models/Service.js";
 // 🟢 CREATE SERVICE (Admin only)
 export const createService = async (req, res) => {
   try {
-    const { salon_id, name, description, duration, sub_services } = req.body;
+    const { name, description, duration, sub_services } = req.body;
 
     if (!req.body) {
       return res.status(400).json({ message: "Request body is missing" });
-    }
-
-    if (!salon_id) {
-      return res.status(400).json({ message: "salon_id is required" });
     }
 
     if (
@@ -26,7 +22,6 @@ export const createService = async (req, res) => {
     }
 
     const service = await Service.create({
-      salon_id,
       name,
       description: description || "",
       duration: duration || "",
@@ -71,7 +66,7 @@ export const getServiceById = async (req, res) => {
 // ✏️ UPDATE SERVICE (Admin only)
 export const updateService = async (req, res) => {
   try {
-    const { salon_id, ...updateData } = req.body;
+    const { ...updateData } = req.body;
 
     const updated = await Service.findByIdAndUpdate(req.params.id, updateData, {
       new: true,

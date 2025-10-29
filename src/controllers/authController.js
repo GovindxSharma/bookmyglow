@@ -47,23 +47,22 @@ export const login = async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    // Generate JWT using util
+    // Generate JWT
     const token = generateToken(user);
 
-    // Store token in DB for logout tracking
+    // Store token in DB
     user.access_token = token;
     await user.save();
 
     res.status(200).json({
       message: "Login successful",
       token,
-      role: user.role, // ✅ only returning role
+      role: user.role,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 // LOGOUT
 export const logout = async (req, res) => {
@@ -75,11 +74,9 @@ export const logout = async (req, res) => {
     const token = authHeader.split(" ")[1];
     if (!token) return res.status(401).json({ message: "Unauthorized" });
 
-    // Find user by token
     const user = await User.findOne({ access_token: token });
     if (!user) return res.status(400).json({ message: "User not found" });
 
-    // Clear token
     user.access_token = null;
     await user.save();
 
@@ -89,17 +86,16 @@ export const logout = async (req, res) => {
   }
 };
 
+// UPDATE USER
 export const updateUser = async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
 
   try {
-    // Hash password if it's being updated
     if (updates.password) {
       updates.password = await bcrypt.hash(updates.password, 10);
     }
 
-    // Optional: limit employee updatable fields
     if (updates.role === "employee") {
       const allowedFields = ["name", "email", "address"];
       Object.keys(updates).forEach((key) => {
@@ -120,12 +116,29 @@ export const updateUser = async (req, res) => {
   }
 };
 
+// 🧑‍🤝‍🧑 GET ALL USERS (Listening API)
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password -access_token");
+    if (!users.length)
+      return res.status(404).json({ message: "No users found" });
+
+    res.status(200).json({
+      message: "Users fetched successfully",
+      users,
+    });
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // 📋 GET ALL EMPLOYEES
 export const getAllEmployees = async (req, res) => {
   try {
     const employees = await User.find({ role: "employee" }).select(
       "-password -access_token"
-    ); // Exclude sensitive info
+    );
 
     if (!employees.length)
       return res.status(404).json({ message: "No employees found" });
@@ -139,7 +152,6 @@ export const getAllEmployees = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 // DELETE USER
 export const deleteUser = async (req, res) => {

@@ -83,7 +83,7 @@ export const createAppointment = async (req, res) => {
         gender: gender || null,
         dob: dob || null,
         address: address || null,
-        note: note || null,
+        // note: note || null,
         source,
       });
     } else {
@@ -163,7 +163,7 @@ export const createAppointment = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Appointment created successfully ✨ Awaiting approval.",
+      message: "Appointment created successfully ✨",
       appointment,
     });
   } catch (err) {

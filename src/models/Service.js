@@ -7,11 +7,11 @@ const subServiceSchema = new mongoose.Schema({
 
 const serviceSchema = new mongoose.Schema(
   {
-    salon_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    // salon_id: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "User",
+    //   required: true,
+    // },
     name: {
       type: String,
       required: [true, "Service name is required"],
