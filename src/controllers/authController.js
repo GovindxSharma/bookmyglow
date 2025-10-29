@@ -124,7 +124,7 @@ export const getAllUsers = async (req, res) => {
       return res.status(404).json({ message: "No users found" });
 
     res.status(200).json({
-      message: "Users fetched successfully",
+      // message: "Users fetched successfully",
       users,
     });
   } catch (err) {
