@@ -1,5 +1,13 @@
 import express from "express";
-import { register, login, logout, updateUser, deleteUser, getAllEmployees} from "../controllers/authController.js";
+import {
+  register,
+  login,
+  logout,
+  updateUser,
+  deleteUser,
+  getAllEmployees,
+  getAllUsers,
+} from "../controllers/authController.js";
 import { verifyToken } from "../middlewares/auth.js";
 import { checkPermission } from "../middlewares/permission.js";
 
@@ -8,6 +16,7 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/login", login);
 router.post("/logout", verifyToken, logout);
+router.get("/", verifyToken, getAllUsers);
 router.put("/:id",
   verifyToken,
   // checkPermission("update"),

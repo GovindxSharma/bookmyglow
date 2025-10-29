@@ -29,10 +29,10 @@ const customerSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    note: {
-      type: String,
-      default: "",
-    },
+    // note: {
+    //   type: String,
+    //   default: "",
+    // },
     source: {
       type: String,
       enum: ["online", "walk-in"],
