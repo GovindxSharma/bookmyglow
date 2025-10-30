@@ -62,6 +62,7 @@ export const createAppointment = async (req, res) => {
       appointment_time,
       payment_mode,
       confirmation_status,
+      amount, // 👈 manual amount from frontend
     } = req.body;
 
     if (!name || !phone || !source || !services || !services.length) {
@@ -83,11 +84,9 @@ export const createAppointment = async (req, res) => {
         gender: gender || null,
         dob: dob || null,
         address: address || null,
-        // note: note || null,
         source,
       });
     } else {
-      // 🧠 Optional updates if missing
       if (name && customer.name !== name) customer.name = name;
       if (gender && !customer.gender) customer.gender = gender;
       if (address && !customer.address) customer.address = address;
@@ -132,6 +131,12 @@ export const createAppointment = async (req, res) => {
       totalAmount += price;
     }
 
+    // 💰 Override total if frontend sends manual amount
+    const finalAmount =
+      amount && parseFloat(amount) > 0
+        ? parseFloat(amount)
+        : totalAmount;
+
     // 💾 Prepare appointment data
     const appointmentData = {
       customer_id: customer._id,
@@ -139,7 +144,7 @@ export const createAppointment = async (req, res) => {
       services: validatedServices,
       date: date || null,
       appointment_time: appointment_time || null,
-      amount: totalAmount || 0,
+      amount: finalAmount, // ✅ overridden or auto
       payment_mode: payment_mode || null,
       source,
       note: note || "",
@@ -150,11 +155,11 @@ export const createAppointment = async (req, res) => {
     const appointment = await Appointment.create(appointmentData);
 
     // 💰 Optional payment creation
-    if (totalAmount > 0 && payment_mode) {
+    if (finalAmount > 0 && payment_mode) {
       await Payment.create({
         appointment_id: appointment._id,
         customer_id: customer._id,
-        amount: totalAmount,
+        amount: finalAmount,
         payment_mode,
         status: "completed",
         date: new Date(),
@@ -175,6 +180,7 @@ export const createAppointment = async (req, res) => {
     });
   }
 };
+
 
 // 📋 GET ALL APPOINTMENTS
 export const getAllAppointments = async (req, res) => {
