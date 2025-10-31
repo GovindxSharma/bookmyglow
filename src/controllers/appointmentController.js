@@ -185,30 +185,34 @@ export const createAppointment = async (req, res) => {
 // 📋 GET ALL APPOINTMENTS
 export const getAllAppointments = async (req, res) => {
   try {
-    const { for_notification, date } = req.query;
+    const { for_notification, date_start, date_end } = req.query;
 
     const filter = {};
 
-    // ✅ Filter based on notification flag
+    // ✅ Notification filter
     if (for_notification === "true") {
-      filter.confirmation_status = false; // pending confirmation
+      filter.confirmation_status = false;
     } else if (for_notification === "false") {
-      filter.confirmation_status = true; // confirmed appointments
+      filter.confirmation_status = true;
     }
 
-    // ✅ Optional date filter
-    if (date) filter.date = date;
+    // ✅ Date range filter
+    if (date_start && date_end) {
+      const start = new Date(date_start);
+      const end = new Date(date_end);
+      end.setHours(23, 59, 59, 999);
+      filter.date = { $gte: start, $lte: end };
+    }
 
+    // ✅ Fetch appointments
     const appointments = await Appointment.find(filter)
       .populate("customer_id", "name phone email gender dob address note")
       .populate("employee_id", "name phone position specialization")
       .populate("services.service_id", "name price")
-      .sort(date ? { created_at: 1 } : { created_at: -1 });
+      .sort({ date: 1 });
 
-    // 🧮 Appointment count (confirmed ones)
-    const appointment_count = await Appointment.countDocuments({
-      confirmation_status: true,
-    });
+    // ✅ Count only matching filtered records
+    const appointment_count = await Appointment.countDocuments(filter);
 
     res.status(200).json({
       count: appointment_count,
@@ -219,6 +223,8 @@ export const getAllAppointments = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+
 
 
 // 🔍 GET SINGLE APPOINTMENT
