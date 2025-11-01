@@ -206,37 +206,73 @@ export const createAppointment = async (req, res) => {
   }
 };
 
-// 📋 GET ALL APPOINTMENTS
+
+
+
+
 export const getAllAppointments = async (req, res) => {
   try {
-    const { for_notification, date_start, date_end } = req.query;
+    const { for_notification, range, date_start, date_end } = req.query;
 
     const filter = {};
 
     // ✅ Notification filter
-    if (for_notification === "true") {
-      filter.confirmation_status = false;
-    } else if (for_notification === "false") {
-      filter.confirmation_status = true;
-    }
-console.log("THIS");
+    if (for_notification === "true") filter.confirmation_status = false;
+    else if (for_notification === "false") filter.confirmation_status = true;
 
-    // ✅ Date range filter
-    if (date_start && date_end) {
-      const start = new Date(date_start);
-      const end = new Date(date_end);
+    const now = new Date();
+    let start, end;
+
+    // ✅ Handle date-based filtering
+    if (range === "today") {
+      // Get YYYY-MM-DD for today
+      const today = now.toISOString().split("T")[0];
+      start = new Date(`${today}T00:00:00.000Z`);
+      end = new Date(`${today}T23:59:59.999Z`);
+      console.log("📅 Today Range:", { start, end });
+    } 
+    else if (range === "week") {
+      // Start (Monday) and End (Sunday) of this week
+      const currentDay = now.getDay(); // 0 = Sunday
+      const diffToMonday = currentDay === 0 ? 6 : currentDay - 1;
+      start = new Date(now);
+      start.setDate(now.getDate() - diffToMonday);
+      start.setHours(0, 0, 0, 0);
+
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
       end.setHours(23, 59, 59, 999);
-      filter.date = { $gte: start, $lte: end };
+      console.log("📅 Weekly Range:", { start, end });
+    } 
+    else if (range === "month") {
+      // Start and End of the month
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      console.log("📅 Monthly Range:", { start, end });
+    } 
+    else if (date_start && date_end) {
+      // Custom range
+      start = new Date(date_start);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(date_end);
+      end.setHours(23, 59, 59, 999);
+      console.log("📅 Custom Range:", { start, end });
     }
 
-    // ✅ Fetch appointments
+    // ✅ Apply filter on created_at date range
+    if (start && end) {
+      filter.created_at = { $gte: start, $lte: end };
+    }
+
+    console.log("🧠 Final Mongo Filter:", JSON.stringify(filter, null, 2));
+
+    // ✅ Fetch appointments and populate
     const appointments = await Appointment.find(filter)
       .populate("customer_id", "name phone email gender dob address note")
-      // .populate("employee_id", "name phone position specialization")
       .populate("services.service_id", "name price")
-      .sort({ date: 1 });
+      .populate("services.employee_id", "name")
+      .sort({ created_at: -1 });
 
-    // ✅ Count only matching filtered records
     const appointment_count = await Appointment.countDocuments(filter);
 
     res.status(200).json({
@@ -248,6 +284,9 @@ console.log("THIS");
     res.status(500).json({ message: err.message });
   }
 };
+
+
+
 
 
 
@@ -273,9 +312,6 @@ export const getAppointmentById = async (req, res) => {
 export const updateAppointment = async (req, res) => {
   try {
     const {
-      employee_id,
-      amount,
-      payment_mode,
       name,
       email,
       phone,
@@ -283,67 +319,85 @@ export const updateAppointment = async (req, res) => {
       dob,
       address,
       note,
+      amount,
+      payment_mode,
+      services, // new: array of services [{ service_id, sub_service_id, employee_id, price, duration }]
+      date,
+      appointment_time,
+      confirmation_status,
+      source,
+      payment_status,
+      rating,
+      feedback,
     } = req.body;
 
     // 🔍 Find appointment first
-    const appointment = await Appointment.findById(req.params.id).populate(
-      "customer_id"
-    );
+    const appointment = await Appointment.findById(req.params.id).populate("customer_id");
     if (!appointment) {
       return res.status(404).json({ message: "Appointment not found" });
     }
 
-    // 👩‍💼 Validate & update employee if provided
-    if (employee_id) {
-      const employee = await Employee.findById(employee_id);
-      if (!employee) {
-        return res.status(404).json({
-          success: false,
-          message: `Employee not found: ${employee_id}`,
-        });
-      }
-      appointment.employee_id = employee._id;
-    }
-
-    // 👤 Update customer info if available
+    // 👤 Update customer info
     if (appointment.customer_id) {
       const customer = await Customer.findById(appointment.customer_id);
-
       if (customer) {
-        if (name) customer.name = name;
-        if (email) customer.email = email; // ✅ Added email update
-        if (phone) customer.phone = phone.replace(/\s+/g, "");
-        if (gender) customer.gender = gender;
-        if (dob) customer.dob = dob;
-        if (address) customer.address = address;
+        if (name !== undefined) customer.name = name;
+        if (email !== undefined) customer.email = email;
+        if (phone !== undefined) customer.phone = phone.replace(/\s+/g, "");
+        if (gender !== undefined) customer.gender = gender;
+        if (dob !== undefined) customer.dob = dob;
+        if (address !== undefined) customer.address = address;
         if (note !== undefined) customer.note = note;
         await customer.save();
       }
     }
 
-    // 🔄 Update appointment fields
-    const updatableFields = [
-      "date",
-      "appointment_time",
-      "confirmation_status",
-      "note",
-      "services",
-      "source",
-      "payment_status",
-    ];
+    // 🔄 Update appointment-level fields
+    if (date !== undefined) appointment.date = date;
+    if (appointment_time !== undefined) appointment.appointment_time = appointment_time;
+    if (confirmation_status !== undefined) appointment.confirmation_status = confirmation_status;
+    if (note !== undefined) appointment.note = note;
+    if (source !== undefined) appointment.source = source;
+    if (payment_status !== undefined) appointment.payment_status = payment_status;
+    if (rating !== undefined) appointment.rating = rating;
+    if (feedback !== undefined) appointment.feedback = feedback;
 
-    updatableFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        appointment[field] = req.body[field];
+    // 💼 Update services array (replace completely if provided)
+    if (services && Array.isArray(services)) {
+      const updatedServices = [];
+      for (const s of services) {
+        const serviceObj = {
+          service_id: s.service_id,
+          sub_service_id: s.sub_service_id || null,
+          employee_id: s.employee_id || null,
+          price: s.price || 0,
+          duration: s.duration || "",
+        };
+
+        // Optional: validate employee exists
+        if (s.employee_id) {
+          const employee = await Employee.findById(s.employee_id);
+          if (!employee) {
+            return res.status(404).json({
+              success: false,
+              message: `Employee not found: ${s.employee_id}`,
+            });
+          }
+        }
+
+        updatedServices.push(serviceObj);
       }
-    });
+      appointment.services = updatedServices;
+    }
 
-    // 💰 Handle payment if provided
+    // 💰 Handle payment updates
+    if (amount !== undefined) appointment.amount = amount;
+    if (payment_mode !== undefined) appointment.payment_mode = payment_mode;
+    if (amount && payment_mode) appointment.payment_status = "completed";
+
+    // Optional: create payment record if new
     if (amount && payment_mode) {
-      const existingPayment = await Payment.findOne({
-        appointment_id: appointment._id,
-      });
-
+      const existingPayment = await Payment.findOne({ appointment_id: appointment._id });
       if (!existingPayment) {
         await Payment.create({
           appointment_id: appointment._id,
@@ -354,20 +408,14 @@ export const updateAppointment = async (req, res) => {
           date: new Date(),
         });
       }
-
-      appointment.amount = amount;
-      appointment.payment_mode = payment_mode;
-      appointment.payment_status = "completed";
-    } else if (amount) {
-      appointment.amount = amount; // update amount even without payment mode
     }
 
-    // 💾 Save appointment changes
+    // 💾 Save appointment
     const updated = await appointment.save();
 
     res.status(200).json({
       success: true,
-      message: "Appointment & customer updated successfully ✅",
+      message: "Appointment updated successfully ✅",
       appointment: updated,
     });
   } catch (err) {
