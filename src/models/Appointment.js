@@ -19,18 +19,36 @@ const appointmentSchema = new mongoose.Schema(
         },
         employee_id: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "Employee", // 👈 optional per-service employee
+          ref: "Employee",
+          required: false, 
         },
-        price: { type: Number, default: 0 },
-        duration: { type: String, default: "" },
+        price: Number,
+        duration: String,
       },
     ],
-    date: { type: Date, required: true },
-    appointment_time: { type: String },
-    confirmation_status: { type: Boolean, default: true },
-    rating: { type: String, default: "" },
-    feedback: { type: String, default: "" },
-    amount: { type: Number, default: 0 },
+    date: {
+      type: Date,
+      required: true,
+    },
+    appointment_time: {
+      type: String,
+    },
+    confirmation_status: {
+      type: Boolean,
+      default: true,
+    },
+    rating: {
+      type: String,
+      default: "",
+    },
+    feedback: {
+      type: String,
+      default: "",
+    },
+    amount: {
+      type: Number,
+      default: 0,
+    },
     payment_status: {
       type: String,
       enum: ["pending", "completed", "refunded"],

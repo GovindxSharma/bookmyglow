@@ -9,41 +9,27 @@ export const searchCustomerByPhone = async (req, res) => {
   try {
     const { phone } = req.query;
 
-    if (!phone) {
+    if (!phone)
       return res.status(400).json({
         success: false,
         message: "Phone number is required.",
       });
-    }
 
     const normalizedPhone = phone.replace(/\s+/g, "");
     const customer = await Customer.findOne({ phone: normalizedPhone });
 
-    if (!customer) {
+    if (!customer)
       return res.status(404).json({
         success: false,
-        message: "No existing customer found with this phone number.",
+        message: "No existing customer found",
       });
-    }
 
-    // 🚫 Disable caching
     res.set("Cache-Control", "no-store");
-
-    res.status(200).json({
-      success: true,
-      message: "Existing customer found.",
-      customer,
-    });
+    res.status(200).json({ success: true, customer });
   } catch (err) {
-    console.error("❌ Error searching customer:", err);
-    res.status(500).json({
-      success: false,
-      message: "Error searching customer.",
-      error: err.message,
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
-
 
 // 📅 CREATE APPOINTMENT
 export const createAppointment = async (req, res) => {
@@ -56,7 +42,6 @@ export const createAppointment = async (req, res) => {
       address,
       note,
       source,
-      employee_id, // fallback employee (main)
       services,
       date,
       appointment_time,
@@ -65,37 +50,37 @@ export const createAppointment = async (req, res) => {
       amount,
     } = req.body;
 
-    // ✅ Basic validation
-    if (!name || !phone || !source || !services || !services.length) {
+    // Validate required fields
+    if (!name || !phone || !source || !services?.length) {
       return res.status(400).json({
         success: false,
-        message: "Name, phone, source, and at least one service are required.",
+        message: "Name, phone, source & services required",
       });
     }
 
     const normalizedPhone = phone.replace(/\s+/g, "");
-
-    // 🔍 Find or create customer
     let customer = await Customer.findOne({ phone: normalizedPhone });
 
+    // Create customer if not exists
     if (!customer) {
       customer = await Customer.create({
         name,
         phone: normalizedPhone,
-        gender: gender || null,
-        dob: dob || null,
-        address: address || null,
+        gender,
+        dob,
+        address,
         source,
       });
     } else {
-      // update partial info if missing
+      // Update customer info if provided
       if (name && customer.name !== name) customer.name = name;
       if (gender && !customer.gender) customer.gender = gender;
       if (address && !customer.address) customer.address = address;
+      if (dob && !customer.dob) customer.dob = dob;
       await customer.save();
     }
 
-    // 🧾 Validate & calculate total amount
+    // ✅ Validate and format services with employee per service
     let totalAmount = 0;
     const validatedServices = [];
 
@@ -105,49 +90,30 @@ export const createAppointment = async (req, res) => {
     for (const s of services) {
       // ✅ Validate service
       const service = await Service.findById(s.service_id);
-      if (!service) {
+      if (!service)
         return res.status(404).json({
           success: false,
           message: `Service not found: ${s.service_id}`,
         });
-      }
 
-      // ✅ Employee assignment logic
-      let serviceEmployee = null;
-
+      let employee_id = null;
       if (s.employee_id) {
-        // case: service has its own employee
-        serviceEmployee = await Employee.findById(s.employee_id);
-        if (!serviceEmployee) {
+        const emp = await Employee.findById(s.employee_id);
+        if (!emp)
           return res.status(404).json({
             success: false,
-            message: `Employee not found for service: ${s.employee_id}`,
+            message: `Invalid employee for service: ${s.service_id}`,
           });
-        }
-      } else if (employee_id) {
-        // case: use fallback employee
-        serviceEmployee = await Employee.findById(employee_id);
-        if (!serviceEmployee) {
-          return res.status(404).json({
-            success: false,
-            message: `Fallback employee not found: ${employee_id}`,
-          });
-        }
-      } else if (!allHaveEmployee) {
-        // case: missing employee and no fallback
-        return res.status(400).json({
-          success: false,
-          message: `Employee not specified for service: ${s.service_id}`,
-        });
+        employee_id = emp._id;
       }
 
-      const price = s.price || service.price || 0;
-      const duration = s.duration || service.duration || "0 min";
+      const price = s.price ?? service.price ?? 0;
+      const duration = s.duration ?? "0 min";
 
       validatedServices.push({
         service_id: s.service_id,
-        sub_service_id: s.sub_service_id || null,
-        employee_id: serviceEmployee ? serviceEmployee._id : null,
+        sub_service_id: s.sub_service_id ?? null,
+        employee_id,
         price,
         duration,
       });
@@ -155,31 +121,23 @@ export const createAppointment = async (req, res) => {
       totalAmount += price;
     }
 
-    // ✅ Handle total amount
-    const finalAmount =
-      amount && parseFloat(amount) > 0
-        ? parseFloat(amount)
-        : totalAmount;
+    const finalAmount = amount > 0 ? amount : totalAmount;
 
-    // ✅ Prepare appointment data
-    const appointmentData = {
+    // Create the appointment
+    const appointment = await Appointment.create({
       customer_id: customer._id,
-      employee_id: employee_id || null, // main / fallback employee
       services: validatedServices,
-      date: date || null,
-      appointment_time: appointment_time || null,
+      date,
+      appointment_time,
       amount: finalAmount,
-      payment_mode: payment_mode || null,
+      payment_mode: payment_mode ?? null,
       source,
-      note: note || "",
-      confirmation_status,
+      note: note ?? "",
+      confirmation_status: confirmation_status ?? true,
       payment_status: payment_mode ? "completed" : "pending",
-    };
+    });
 
-    // ✅ Create appointment
-    const appointment = await Appointment.create(appointmentData);
-
-    // ✅ Record payment if applicable
+    // Create payment record if needed
     if (finalAmount > 0 && payment_mode) {
       await Payment.create({
         appointment_id: appointment._id,
@@ -191,18 +149,41 @@ export const createAppointment = async (req, res) => {
       });
     }
 
+    // ✅ Populate for response (including nested services.employee_id)
+    const populatedAppointment = await Appointment.findById(appointment._id)
+      .populate({
+        path: "customer_id",
+        select: "name phone email gender dob address note",
+      })
+      .populate({
+        path: "services.service_id",
+        select: "name price",
+      })
+      .populate({
+        path: "services.employee_id",
+        select: "name phone position specialization",
+      })
+      .lean();
+
+    // Fix services to keep employee_id and duration intact
+    populatedAppointment.services = populatedAppointment.services.map(
+      (s, i) => ({
+        ...s,
+        employee_id: s.employee_id
+          ? s.employee_id
+          : validatedServices[i].employee_id,
+        duration: s.duration ? s.duration : validatedServices[i].duration,
+      })
+    );
+
     res.status(201).json({
       success: true,
       message: "Appointment created successfully ✨",
-      appointment,
+      appointment: populatedAppointment,
     });
   } catch (err) {
-    console.error("❌ Error creating appointment:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create appointment",
-      error: err.message,
-    });
+    console.error("❌ Create appointment error:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
@@ -210,18 +191,11 @@ export const createAppointment = async (req, res) => {
 export const getAllAppointments = async (req, res) => {
   try {
     const { for_notification, date_start, date_end } = req.query;
-
     const filter = {};
 
-    // ✅ Notification filter
-    if (for_notification === "true") {
-      filter.confirmation_status = false;
-    } else if (for_notification === "false") {
-      filter.confirmation_status = true;
-    }
-console.log("THIS");
+    if (for_notification === "true") filter.confirmation_status = false;
+    if (for_notification === "false") filter.confirmation_status = true;
 
-    // ✅ Date range filter
     if (date_start && date_end) {
       const start = new Date(date_start);
       const end = new Date(date_end);
@@ -229,14 +203,12 @@ console.log("THIS");
       filter.date = { $gte: start, $lte: end };
     }
 
-    // ✅ Fetch appointments
     const appointments = await Appointment.find(filter)
       .populate("customer_id", "name phone email gender dob address note")
-      // .populate("employee_id", "name phone position specialization")
       .populate("services.service_id", "name price")
+      .populate("services.employee_id", "name phone position specialization")
       .sort({ date: 1 });
 
-    // ✅ Count only matching filtered records
     const appointment_count = await Appointment.countDocuments(filter);
 
     res.status(200).json({
@@ -244,21 +216,17 @@ console.log("THIS");
       appointments,
     });
   } catch (err) {
-    console.error("❌ Error fetching appointments:", err);
     res.status(500).json({ message: err.message });
   }
 };
-
-
-
 
 // 🔍 GET SINGLE APPOINTMENT
 export const getAppointmentById = async (req, res) => {
   try {
     const appointment = await Appointment.findById(req.params.id)
       .populate("customer_id")
-      .populate("employee_id", "name phone position specialization")
-      .populate("services.service_id");
+      .populate("services.service_id", "name price")
+      .populate("services.employee_id", "name phone position specialization");
 
     if (!appointment)
       return res.status(404).json({ message: "Appointment not found" });
@@ -273,105 +241,109 @@ export const getAppointmentById = async (req, res) => {
 export const updateAppointment = async (req, res) => {
   try {
     const {
-      employee_id,
       amount,
       payment_mode,
       name,
-      email,
       phone,
       gender,
       dob,
       address,
       note,
+      services,
     } = req.body;
 
-    // 🔍 Find appointment first
     const appointment = await Appointment.findById(req.params.id).populate(
       "customer_id"
     );
-    if (!appointment) {
+    if (!appointment)
       return res.status(404).json({ message: "Appointment not found" });
+
+    // ✅ Update customer
+    const customer = appointment.customer_id;
+    if (customer) {
+      if (name) customer.name = name;
+      if (phone) customer.phone = phone.replace(/\s+/g, "");
+      if (gender) customer.gender = gender;
+      if (dob) customer.dob = dob;
+      if (address) customer.address = address;
+      if (note !== undefined) customer.note = note;
+      await customer.save();
     }
 
-    // 👩‍💼 Validate & update employee if provided
-    if (employee_id) {
-      const employee = await Employee.findById(employee_id);
-      if (!employee) {
-        return res.status(404).json({
-          success: false,
-          message: `Employee not found: ${employee_id}`,
+    // ✅ Update services with employee per service
+    if (services?.length) {
+      const updatedServices = [];
+
+      for (const s of services) {
+        const serviceExists = await Service.findById(s.service_id);
+        if (!serviceExists)
+          return res.status(404).json({
+            success: false,
+            message: `Service not found: ${s.service_id}`,
+          });
+
+        if (s.employee_id) {
+          const emp = await Employee.findById(s.employee_id);
+          if (!emp)
+            return res.status(404).json({
+              success: false,
+              message: `Invalid employee for service ${s.service_id}`,
+            });
+        }
+
+        updatedServices.push({
+          service_id: s.service_id,
+          sub_service_id: s.sub_service_id ?? null,
+          employee_id: s.employee_id ?? null,
+          price: s.price ?? 0,
+          duration: s.duration ?? "0 min",
         });
       }
-      appointment.employee_id = employee._id;
+
+      appointment.services = updatedServices;
     }
 
-    // 👤 Update customer info if available
-    if (appointment.customer_id) {
-      const customer = await Customer.findById(appointment.customer_id);
-
-      if (customer) {
-        if (name) customer.name = name;
-        if (email) customer.email = email; // ✅ Added email update
-        if (phone) customer.phone = phone.replace(/\s+/g, "");
-        if (gender) customer.gender = gender;
-        if (dob) customer.dob = dob;
-        if (address) customer.address = address;
-        if (note !== undefined) customer.note = note;
-        await customer.save();
-      }
-    }
-
-    // 🔄 Update appointment fields
-    const updatableFields = [
+    // ✅ Update appointment fields
+    const fieldsToUpdate = [
       "date",
       "appointment_time",
       "confirmation_status",
       "note",
-      "services",
       "source",
       "payment_status",
     ];
+    fieldsToUpdate.forEach(
+      (f) => req.body[f] !== undefined && (appointment[f] = req.body[f])
+    );
 
-    updatableFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        appointment[field] = req.body[field];
-      }
-    });
-
-    // 💰 Handle payment if provided
+    // ✅ Handle payment
     if (amount && payment_mode) {
       const existingPayment = await Payment.findOne({
         appointment_id: appointment._id,
       });
-
       if (!existingPayment) {
         await Payment.create({
           appointment_id: appointment._id,
-          customer_id: appointment.customer_id,
+          customer_id: customer._id,
           amount,
           payment_mode,
           status: "completed",
           date: new Date(),
         });
       }
-
       appointment.amount = amount;
       appointment.payment_mode = payment_mode;
       appointment.payment_status = "completed";
-    } else if (amount) {
-      appointment.amount = amount; // update amount even without payment mode
     }
 
-    // 💾 Save appointment changes
     const updated = await appointment.save();
 
     res.status(200).json({
       success: true,
-      message: "Appointment & customer updated successfully ✅",
+      message: "Appointment updated ✅",
       appointment: updated,
     });
   } catch (err) {
-    console.error("❌ Error updating appointment:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -382,7 +354,8 @@ export const deleteAppointment = async (req, res) => {
     const deleted = await Appointment.findByIdAndDelete(req.params.id);
     if (!deleted)
       return res.status(404).json({ message: "Appointment not found" });
-    res.status(200).json({ message: "Appointment deleted successfully 🗑️" });
+
+    res.status(200).json({ message: "Appointment deleted 🗑️" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
