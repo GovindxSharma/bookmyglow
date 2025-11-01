@@ -56,15 +56,16 @@ export const createAppointment = async (req, res) => {
       address,
       note,
       source,
-      employee_id,
+      employee_id, // fallback employee (main)
       services,
       date,
       appointment_time,
       payment_mode,
       confirmation_status,
-      amount, // 👈 manual amount from frontend
+      amount,
     } = req.body;
 
+    // ✅ Basic validation
     if (!name || !phone || !source || !services || !services.length) {
       return res.status(400).json({
         success: false,
@@ -87,34 +88,56 @@ export const createAppointment = async (req, res) => {
         source,
       });
     } else {
+      // update partial info if missing
       if (name && customer.name !== name) customer.name = name;
       if (gender && !customer.gender) customer.gender = gender;
       if (address && !customer.address) customer.address = address;
       await customer.save();
     }
 
-    // 👩‍💼 Validate Employee
-    let employee = null;
-    if (employee_id) {
-      employee = await Employee.findById(employee_id);
-      if (!employee) {
-        return res.status(404).json({
-          success: false,
-          message: `Employee not found: ${employee_id}`,
-        });
-      }
-    }
-
     // 🧾 Validate & calculate total amount
     let totalAmount = 0;
     const validatedServices = [];
 
+    // Check if all services already have employees
+    const allHaveEmployee = services.every((s) => s.employee_id);
+
     for (const s of services) {
+      // ✅ Validate service
       const service = await Service.findById(s.service_id);
       if (!service) {
         return res.status(404).json({
           success: false,
           message: `Service not found: ${s.service_id}`,
+        });
+      }
+
+      // ✅ Employee assignment logic
+      let serviceEmployee = null;
+
+      if (s.employee_id) {
+        // case: service has its own employee
+        serviceEmployee = await Employee.findById(s.employee_id);
+        if (!serviceEmployee) {
+          return res.status(404).json({
+            success: false,
+            message: `Employee not found for service: ${s.employee_id}`,
+          });
+        }
+      } else if (employee_id) {
+        // case: use fallback employee
+        serviceEmployee = await Employee.findById(employee_id);
+        if (!serviceEmployee) {
+          return res.status(404).json({
+            success: false,
+            message: `Fallback employee not found: ${employee_id}`,
+          });
+        }
+      } else if (!allHaveEmployee) {
+        // case: missing employee and no fallback
+        return res.status(400).json({
+          success: false,
+          message: `Employee not specified for service: ${s.service_id}`,
         });
       }
 
@@ -124,6 +147,7 @@ export const createAppointment = async (req, res) => {
       validatedServices.push({
         service_id: s.service_id,
         sub_service_id: s.sub_service_id || null,
+        employee_id: serviceEmployee ? serviceEmployee._id : null,
         price,
         duration,
       });
@@ -131,30 +155,31 @@ export const createAppointment = async (req, res) => {
       totalAmount += price;
     }
 
-    // 💰 Override total if frontend sends manual amount
+    // ✅ Handle total amount
     const finalAmount =
       amount && parseFloat(amount) > 0
         ? parseFloat(amount)
         : totalAmount;
 
-    // 💾 Prepare appointment data
+    // ✅ Prepare appointment data
     const appointmentData = {
       customer_id: customer._id,
-      employee_id: employee ? employee._id : null,
+      employee_id: employee_id || null, // main / fallback employee
       services: validatedServices,
       date: date || null,
       appointment_time: appointment_time || null,
-      amount: finalAmount, // ✅ overridden or auto
+      amount: finalAmount,
       payment_mode: payment_mode || null,
       source,
       note: note || "",
-      confirmation_status: confirmation_status,
+      confirmation_status,
       payment_status: payment_mode ? "completed" : "pending",
     };
 
+    // ✅ Create appointment
     const appointment = await Appointment.create(appointmentData);
 
-    // 💰 Optional payment creation
+    // ✅ Record payment if applicable
     if (finalAmount > 0 && payment_mode) {
       await Payment.create({
         appointment_id: appointment._id,
@@ -181,7 +206,6 @@ export const createAppointment = async (req, res) => {
   }
 };
 
-
 // 📋 GET ALL APPOINTMENTS
 export const getAllAppointments = async (req, res) => {
   try {
@@ -195,6 +219,7 @@ export const getAllAppointments = async (req, res) => {
     } else if (for_notification === "false") {
       filter.confirmation_status = true;
     }
+console.log("THIS");
 
     // ✅ Date range filter
     if (date_start && date_end) {
@@ -207,7 +232,7 @@ export const getAllAppointments = async (req, res) => {
     // ✅ Fetch appointments
     const appointments = await Appointment.find(filter)
       .populate("customer_id", "name phone email gender dob address note")
-      .populate("employee_id", "name phone position specialization")
+      // .populate("employee_id", "name phone position specialization")
       .populate("services.service_id", "name price")
       .sort({ date: 1 });
 
