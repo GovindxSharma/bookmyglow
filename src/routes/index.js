@@ -5,7 +5,7 @@ import serviceRoutes from "./serviceRoutes.js";
 import attendanceRoutes from "./attendanceRoutes.js";
 import paymentRoutes from "./paymentRoutes.js";
 import employeeRoutes from "./employeeRoutes.js"
-import whatsappRoutes from "./whatsappRoutes.js"
+// import whatsappRoutes from "./whatsappRoutes.js"
 
 
 const router = express.Router();

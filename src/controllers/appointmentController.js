@@ -37,6 +37,7 @@ export const createAppointment = async (req, res) => {
     const {
       name,
       phone,
+      email,
       gender,
       dob,
       address,
@@ -65,6 +66,7 @@ export const createAppointment = async (req, res) => {
     if (!customer) {
       customer = await Customer.create({
         name,
+        email,
         phone: normalizedPhone,
         gender,
         dob,
@@ -210,7 +212,7 @@ export const getAllAppointments = async (req, res) => {
       const today = now.toISOString().split("T")[0];
       start = new Date(`${today}T00:00:00.000Z`);
       end = new Date(`${today}T23:59:59.999Z`);
-      console.log("📅 Today Range:", { start, end });
+      // console.log("📅 Today Range:", { start, end });
     } 
     else if (range === "week") {
       // Start (Monday) and End (Sunday) of this week
@@ -223,13 +225,13 @@ export const getAllAppointments = async (req, res) => {
       end = new Date(start);
       end.setDate(start.getDate() + 6);
       end.setHours(23, 59, 59, 999);
-      console.log("📅 Weekly Range:", { start, end });
+      // console.log("📅 Weekly Range:", { start, end });
     } 
     else if (range === "month") {
       // Start and End of the month
       start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-      console.log("📅 Monthly Range:", { start, end });
+      // console.log("📅 Monthly Range:", { start, end });
     } 
     else if (date_start && date_end) {
       // Custom range
@@ -237,15 +239,13 @@ export const getAllAppointments = async (req, res) => {
       start.setHours(0, 0, 0, 0);
       end = new Date(date_end);
       end.setHours(23, 59, 59, 999);
-      console.log("📅 Custom Range:", { start, end });
+      // console.log("📅 Custom Range:", { start, end });
     }
 
     // ✅ Apply filter on created_at date range
     if (start && end) {
       filter.created_at = { $gte: start, $lte: end };
     }
-
-    console.log("🧠 Final Mongo Filter:", JSON.stringify(filter, null, 2));
 
     // ✅ Fetch appointments and populate
     const appointments = await Appointment.find(filter)
@@ -288,6 +288,7 @@ export const updateAppointment = async (req, res) => {
     const {
       name,
       phone,
+      email,
       gender,
       dob,
       address,
@@ -304,6 +305,7 @@ export const updateAppointment = async (req, res) => {
       feedback,
     } = req.body;
 
+    // const email = req.body.email;
     // 🔍 Find appointment first
     const appointment = await Appointment.findById(req.params.id).populate("customer_id");
     if (!appointment) {
@@ -316,6 +318,7 @@ export const updateAppointment = async (req, res) => {
       if (name) customer.name = name;
       if (phone) customer.phone = phone.replace(/\s+/g, "");
       if (gender) customer.gender = gender;
+      if (email) customer.email = email;
       if (dob) customer.dob = dob;
       if (address) customer.address = address;
       if (note !== undefined) customer.note = note;
