@@ -6,6 +6,7 @@ import {
   getPaymentsByDate,
   getPaymentsByEmployeeAndDate,
   getPaymentsGroupedByDate,
+  getEmployeePerformanceByRange,
 } from "../controllers/paymentController.js";
 import { verifyToken } from "../middlewares/auth.js";
 
@@ -33,5 +34,9 @@ router.get(
 
 // 📊 Get grouped payments by date (for reports/dashboard)
 router.get("/grouped", verifyToken, getPaymentsGroupedByDate);
+
+//Get Revenu and Appointment List for Date Range as per employee_id
+router.get("/employee/:employeeId", verifyToken, getEmployeePerformanceByRange);
+
 
 export default router;
