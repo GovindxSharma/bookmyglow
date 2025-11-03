@@ -47,7 +47,7 @@ router.put(
 router.delete(
   "/:id",
   verifyToken,
-  checkPermission("delete", "appointment"),
+  // checkPermission("delete", "appointment"),
   deleteAppointment
 );
 

@@ -7,16 +7,6 @@ const appointmentSchema = new mongoose.Schema(
       ref: "Customer",
       required: true,
     },
-    // salon_id: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "User",
-    //   required: true,
-    // },
-    employee_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Employee",
-    },
-
     services: [
       {
         service_id: {
@@ -25,19 +15,17 @@ const appointmentSchema = new mongoose.Schema(
           required: true,
         },
         sub_service_id: {
-          type: mongoose.Schema.Types.ObjectId, // no nested ref
+          type: mongoose.Schema.Types.ObjectId,
         },
-        price: {
-          type: Number,
-          default: 0,
+        employee_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Employee",
+          required: false, 
         },
-        duration: {
-          type: String,
-          default: "",
-        },
+        price: Number,
+        duration: String,
       },
     ],
-
     date: {
       type: Date,
       required: true,
@@ -71,10 +59,7 @@ const appointmentSchema = new mongoose.Schema(
       enum: ["cash", "card", "upi", "wallet", ""],
       default: "",
     },
-    note: {
-      type: String,
-      default: "",
-    },
+    note: { type: String, default: "" },
     source: {
       type: String,
       enum: ["online", "walk-in"],
@@ -82,12 +67,10 @@ const appointmentSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: {
-      createdAt: "created_at",
-      updatedAt: "updated_at",
-    },
+    timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
   }
 );
+
 
 const Appointment = mongoose.model("Appointment", appointmentSchema);
 export default Appointment;
