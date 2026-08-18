@@ -20,7 +20,7 @@ const appointmentSchema = new mongoose.Schema(
         employee_id: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Employee",
-          required: false, 
+          required: false,
         },
         price: Number,
         duration: String,
@@ -37,6 +37,21 @@ const appointmentSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    service_status: {
+      type: String,
+      enum: ["in_queue", "in_progress", "completed", "cancelled"],
+      default: "in_queue",
+    },
+    payment_status: {
+      type: String,
+      enum: ["pending", "completed", "refunded"],
+      default: "pending",
+    },
+    payment_mode: {
+      type: String,
+      enum: ["cash", "card", "upi", "wallet", ""],
+      default: "",
+    },
     rating: {
       type: String,
       default: "",
@@ -49,16 +64,6 @@ const appointmentSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    payment_status: {
-      type: String,
-      enum: ["pending", "completed", "refunded"],
-      default: "pending",
-    },
-    payment_mode: {
-      type: String,
-      enum: ["cash", "card", "upi", "wallet", ""],
-      default: "",
-    },
     note: { type: String, default: "" },
     source: {
       type: String,
@@ -70,7 +75,6 @@ const appointmentSchema = new mongoose.Schema(
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
   }
 );
-
 
 const Appointment = mongoose.model("Appointment", appointmentSchema);
 export default Appointment;

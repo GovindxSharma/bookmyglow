@@ -4,7 +4,7 @@ import { generateToken } from "../utils/jwt.js";
 
 // REGISTER
 export const register = async (req, res) => {
-  const { name, email, password, role, address } = req.body;
+  const { name, email, password, role, address, phone, gender } = req.body;
 
   if (!name || !email) {
     return res.status(400).json({ message: "Name and email are required" });
@@ -13,15 +13,23 @@ export const register = async (req, res) => {
   if (role !== "employee" && !password) {
     return res
       .status(400)
-      .json({ message: "Password is required for non-employee users" });
+      .json({ message: "Password is required for user account creation" });
   }
 
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser)
-      return res.status(400).json({ message: "User already exists" });
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existingUser) {
+      return res.status(400).json({ message: "User with this email already exists" });
+    }
 
-    const userData = { name, email, role, address: address || null };
+    const userData = {
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      role: role || "receptionist",
+      address: address || "",
+      gender: gender || "other",
+      phone: Array.isArray(phone) ? phone : phone ? [phone] : [],
+    };
 
     if (password && role !== "employee") {
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -29,8 +37,21 @@ export const register = async (req, res) => {
     }
 
     const user = await User.create(userData);
+    const token = generateToken(user);
+    user.access_token = token;
+    await user.save();
 
-    res.status(201).json({ message: "User registered successfully", user });
+    res.status(201).json({
+      message: "User registered successfully ✨",
+      token,
+      role: user.role,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -39,13 +60,21 @@ export const register = async (req, res) => {
 // LOGIN
 export const login = async (req, res) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
+  }
+
   try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "User not found" });
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
 
     // Generate JWT
     const token = generateToken(user);
@@ -55,9 +84,15 @@ export const login = async (req, res) => {
     await user.save();
 
     res.status(200).json({
-      message: "Login successful",
+      message: "Login successful ✨",
       token,
       role: user.role,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -71,14 +106,14 @@ export const logout = async (req, res) => {
     if (!authHeader)
       return res.status(401).json({ message: "No token provided" });
 
-    const token = authHeader.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "Unauthorized" });
+    const parts = authHeader.split(" ");
+    const token = parts.length === 2 ? parts[1] : authHeader;
 
     const user = await User.findOne({ access_token: token });
-    if (!user) return res.status(400).json({ message: "User not found" });
-
-    user.access_token = null;
-    await user.save();
+    if (user) {
+      user.access_token = null;
+      await user.save();
+    }
 
     res.json({ message: "Logged out successfully" });
   } catch (err) {
@@ -89,42 +124,35 @@ export const logout = async (req, res) => {
 // UPDATE USER
 export const updateUser = async (req, res) => {
   const { id } = req.params;
-  const updates = req.body;
+  const updates = { ...req.body };
 
   try {
-    if (updates.password) {
+    if (updates.password && updates.password.trim() !== "") {
       updates.password = await bcrypt.hash(updates.password, 10);
-    }
-
-    if (updates.role === "employee") {
-      const allowedFields = ["name", "email", "address"];
-      Object.keys(updates).forEach((key) => {
-        if (!allowedFields.includes(key)) delete updates[key];
-      });
+    } else {
+      delete updates.password;
     }
 
     const updatedUser = await User.findByIdAndUpdate(id, updates, {
       new: true,
-    }).select("-password");
+    }).select("-password -access_token");
 
     if (!updatedUser)
       return res.status(404).json({ message: "User not found" });
 
-    res.json({ message: "User updated successfully", user: updatedUser });
+    res.json({ message: "User updated successfully ✅", user: updatedUser });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// 🧑‍🤝‍🧑 GET ALL USERS (Listening API)
+// GET ALL USERS
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password -access_token");
-    if (!users.length)
-      return res.status(404).json({ message: "No users found" });
-
+    const users = await User.find().select("-password -access_token").sort({ created_at: -1 });
     res.status(200).json({
-      // message: "Users fetched successfully",
+      success: true,
+      count: users.length,
       users,
     });
   } catch (err) {
@@ -133,15 +161,12 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// 📋 GET ALL EMPLOYEES
+// GET ALL EMPLOYEES
 export const getAllEmployees = async (req, res) => {
   try {
     const employees = await User.find({ role: "employee" }).select(
       "-password -access_token"
     );
-
-    if (!employees.length)
-      return res.status(404).json({ message: "No employees found" });
 
     res.status(200).json({
       message: "Employees fetched successfully",
@@ -163,7 +188,7 @@ export const deleteUser = async (req, res) => {
     if (!deletedUser)
       return res.status(404).json({ message: "User not found" });
 
-    res.json({ message: "User deleted successfully" });
+    res.json({ message: "User deleted successfully 🗑️" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

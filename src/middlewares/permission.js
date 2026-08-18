@@ -76,17 +76,16 @@ export const checkPermission = (action, resource = "") => {
 
       case "service":
       case "inventory":
-        
       case "attendance":
         if (action === "create" || action === "read" || action === "update") {
-          if (["admin", "receptionist"].includes(role)) return next();
+          if (["admin", "super_admin", "receptionist"].includes(role)) return next();
         }
         if (action === "delete") {
           if (["admin", "super_admin"].includes(role)) return next();
         }
         return res
           .status(403)
-          .json({ message: "Forbidden: Cannot access attendance" });
+          .json({ message: `Forbidden: Cannot perform ${action} on ${resource}` });
 
       
       case "payment":

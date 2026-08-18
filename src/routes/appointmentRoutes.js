@@ -5,53 +5,33 @@ import {
   getAppointmentById,
   updateAppointment,
   deleteAppointment,
-  searchCustomerByPhone
+  searchCustomerByPhone,
+  getSlotAvailability,
 } from "../controllers/appointmentController.js";
 import { verifyToken } from "../middlewares/auth.js";
-import { checkPermission } from "../middlewares/permission.js"; // ✅ updated import
+import { checkPermission } from "../middlewares/permission.js";
 
 const router = express.Router();
 
-// 🧾 receptionist/admin can create appointment
-router.post(
-  "/",
-  // verifyToken,
-  // checkPermission("create", "appointment"),
-  createAppointment
-);
+// ⏱️ Real-time slot availability for selected date & stylist (Public)
+router.get("/availability", getSlotAvailability);
 
-// 📋 admin/receptionist view appointments
-router.get(
-  "/",
-  verifyToken,
-  // checkPermission("read", "appointment"),
-  getAllAppointments
-);
+// 🧾 Create appointment (Public online bookings & Front desk POS)
+router.post("/", createAppointment);
 
-router.get(
-  "/:id",
-  verifyToken,
-  checkPermission("read", "appointment"),
-  getAppointmentById
-);
+// 📋 View all appointments (Protected)
+router.get("/", verifyToken, getAllAppointments);
 
-// ✏️ update appointment (admin/receptionist)
-router.put(
-  "/:id",
-  verifyToken,
-  // checkPermission("update", "appointment"),
-  updateAppointment
-);
+// 📞 Customer search by phone
+router.get("/customer/search/", verifyToken, searchCustomerByPhone);
 
-// 🗑 delete appointment (admin/super_admin only)
-router.delete(
-  "/:id",
-  verifyToken,
-  // checkPermission("delete", "appointment"),
-  deleteAppointment
-);
+// 🔍 Single appointment
+router.get("/:id", verifyToken, checkPermission("read", "appointment"), getAppointmentById);
 
-router.get("/customer/search/", verifyToken,searchCustomerByPhone);
+// ✏️ Update appointment
+router.put("/:id", verifyToken, updateAppointment);
 
+// 🗑 Delete appointment
+router.delete("/:id", verifyToken, deleteAppointment);
 
 export default router;

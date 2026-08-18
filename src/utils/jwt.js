@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 
+const getSecret = () => process.env.JWT_SECRET || "bookmyglow_default_jwt_secret_salon_platform_2026";
+
 /**
  * Generate JWT with user details inside
  * @param {Object} user - Mongoose user document
@@ -13,7 +15,7 @@ export const generateToken = (user) => {
       email: user.email,
       role: user.role,
     },
-    process.env.JWT_SECRET,
+    getSecret(),
     { expiresIn: "7d" }
   );
 };
