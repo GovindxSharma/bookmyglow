@@ -11,10 +11,11 @@ import { verifyToken } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-router.post("/", verifyToken,createEmployee); // ➕ Create
-router.get("/", verifyToken, getAllEmployees); // 📋 All employees (optional salon_id query)
-router.get("/:id", verifyToken, getEmployeeById); // 🔍 Single employee
-router.put("/:id", verifyToken, updateEmployee); // ✏️ Update
-router.delete("/:id", verifyToken, deleteEmployee); // ❌ Delete
+router.get("/", getAllEmployees); // 📋 All employees (Public read for client booking)
+router.get("/:id", getEmployeeById); // 🔍 Single employee
+router.post("/", verifyToken, createEmployee); // ➕ Create (Admin only)
+router.put("/:id", verifyToken, updateEmployee); // ✏️ Update (Admin only)
+router.delete("/:id", verifyToken, deleteEmployee); // ❌ Delete (Admin only)
 
 export default router;
+

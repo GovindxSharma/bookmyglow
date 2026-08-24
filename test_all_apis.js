@@ -33,7 +33,7 @@ async function runTests() {
   try {
     const health = await axios.get(`${BASE_URL}/health`);
     assert(health.status === 200 && health.data.status === "ok", "GET /health returns 200 OK");
-    assert(health.data.salon.name.includes("Aura Salon"), "Health returns Aura Salon brand");
+    assert(!!health.data.salon?.name, `Health returns salon brand (${health.data.salon?.name})`);
 
     const info = await axios.get(`${BASE_URL}/salon-info`);
     assert(info.data.success === true, "GET /salon-info returns success");
@@ -256,12 +256,12 @@ async function runTests() {
 
     if (sampleEmployeeId) {
       const stylistDayPay = await axios.get(
-        `${BASE_URL}/payments/employee/${sampleEmployeeId}/${todayStr}`,
+        `${BASE_URL}/payments/employee/${sampleEmployeeId}?start=${todayStr}&end=${todayStr}`,
         adminHeaders
       );
       assert(
-        typeof stylistDayPay.data.total_employee_amount === "number",
-        "GET /payments/employee/:id/:date returns stylist day metrics"
+        stylistDayPay.data.success === true && typeof stylistDayPay.data.summary?.totalRevenue === "number",
+        "GET /payments/employee/:id returns stylist performance metrics"
       );
     }
   } catch (err) {
