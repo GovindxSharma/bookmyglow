@@ -152,8 +152,13 @@ export const getPaymentsByEmployeeAndDate = async (req, res) => {
     ]);
 
     if (!data.length) {
-      return res.status(404).json({
+      return res.status(200).json({
         message: "No appointments found for this employee on this date",
+        employee_id,
+        date,
+        total_appointments: 0,
+        total_employee_amount: 0,
+        appointments: [],
       });
     }
 
